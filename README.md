@@ -1,2 +1,3 @@
-# Analisis-de-informacion-genetica
-Primera, segunda y tercera generación de secuenciación, metagenómica y CGH
+# Analisis-de-secuencias RNA-seq
+
+RNA-seq (RNA sequencing) es un poderoso método de secuenciación de segunda generación mediante el cual se analiza el juego completo de ARN (transcriptoma) en una muestra biológica con la finalidad de entender la expresión génica, identificar nuevos transcritos, detectar fusión génica y estudiar editaje alternativo. El método consiste en convertir el ARN en ADNc estable, fragmentarlo y secuenciar los fragmentos para proveer información cuantitativa y cualitativa acerca de los genes activos en un periodo específico, su nivel de expresión y su asociación ya con mecanismos biológicos y el estado de las enfermedades.
