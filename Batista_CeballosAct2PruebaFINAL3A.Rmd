@@ -1,0 +1,446 @@
+---
+title: "Resolución Actividad 2, Secuenciación y Ómicas de Próxima Generación, Máster Bioinformática UNIR (2025). \n Análisis de expresión diferencial de genes relacionados con la obesidad mediante RNA-seq"
+author: "Oriana Batista Ceballos"
+date: "2025-12-21"
+output:
+  html_document:
+    theme: readable
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    highlight: textmate
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+  word_document:
+    toc: true
+    toc_depth: '3'
+---
+
+# I. Introducción
+
+Esta parte contiene el Script 3, en el cual se encuentra información acerca de la red de coexpresión y enriquecimiento.
+
+```{r, message=FALSE, warning=FALSE, eval=TRUE} 
+# ==================== ANÁLISIS C y D: RED DE COEXPRESIÓN Y ENRIQUECIMIENTO ====================
+
+# 1. CARGAR LIBRERÍAS
+library(tximport)
+library(DESeq2)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(igraph)
+library(reshape2)
+library(gprofiler2)
+
+# 2. CONFIGURACIÓN Y LECTURA DE DATOS
+cat("\n▶ INICIANDO ANÁLISIS...\n")
+
+samples <- c("AbrahamSimpson", "HomerSimpson", "MargeSimpson", "PattyBouvier", "SelmaBouvier")
+files <- file.path("Salmon", samples, "quant.sf")
+names(files) <- samples
+
+# Verificar archivos
+if(!file.exists("Transcrito_a_Gen.tsv")) {
+  stop("Archivo 'Transcrito_a_Gen.tsv' no encontrado.")
+}
+
+tx2gene <- read.table("Transcrito_a_Gen.tsv", header = TRUE, sep = "\t")
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene, countsFromAbundance = "no")
+counts_matrix <- round(txi$counts)
+
+cat("✓ Genes cargados:", nrow(counts_matrix), "\n")
+
+# 3. ANÁLISIS DIFERENCIAL
+cat("\n▶ ANÁLISIS DIFERENCIAL...\n")
+
+colData <- data.frame(
+  row.names = samples,
+  Grupo = factor(c("obeso1", "obeso1", "obeso2", "obeso2", "obeso2"))
+)
+
+dds <- DESeqDataSetFromMatrix(countData = counts_matrix, colData = colData, design = ~ Grupo)
+dds <- DESeq(dds)
+res <- results(dds, contrast = c("Grupo", "obeso1", "obeso2"))
+
+res_df <- as.data.frame(res)
+res_df$gene <- rownames(res_df)
+res_df$significant <- ifelse(
+  !is.na(res_df$padj) & res_df$padj < 0.05 & abs(res_df$log2FoldChange) > 1,
+  "Significativo",
+  "No significativo"
+)
+
+sig_genes <- res_df$gene[res_df$significant == "Significativo"]
+cat("✓ Genes significativos (padj<0.05 & |FC|>1):", length(sig_genes), "\n")
+
+# Guardar resultados (CORREGIDO)
+write.csv(res_df, "differential_expression_results.csv")
+
+# ==================== GRÁFICA 1: VOLCANO PLOT ====================
+cat("\n▶ GRÁFICA 1: Volcano Plot\n")
+
+# Crear Volcano Plot
+volcano_plot <- ggplot(res_df, aes(x = log2FoldChange, y = -log10(pvalue), color = significant)) +
+  geom_point(alpha = 0.7, size = 2) +
+  scale_color_manual(values = c("No significativo" = "gray70", "Significativo" = "red")) +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed", color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "green", alpha = 0.5) +
+  labs(title = "Volcano Plot: Obeso 1 vs Obeso 2",
+       x = "Log2 Fold Change", 
+       y = "-Log10 p-value",
+       color = "Significancia") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# Añadir etiquetas
+if(length(sig_genes) > 0) {
+  sig_data <- res_df[res_df$significant == "Significativo", ]
+  volcano_plot <- volcano_plot +
+    geom_text(data = sig_data, aes(label = gene), 
+              vjust = -0.5, size = 3, check_overlap = TRUE)
+}
+
+# MOSTRAR Volcano Plot
+print(volcano_plot)
+ggsave("01_volcano_plot.png", volcano_plot, width = 10, height = 7)
+
+# ==================== GRÁFICA 2: MA-PLOT ====================
+cat("\n▶ GRÁFICA 2: MA-Plot\n")
+
+# Crear MA-Plot
+normalized_counts <- counts(dds, normalized = TRUE)
+ma_data <- res_df
+ma_data$mean_expression <- rowMeans(normalized_counts)
+
+ma_plot <- ggplot(ma_data, aes(x = log10(mean_expression + 1), y = log2FoldChange, color = significant)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_hline(yintercept = 0, color = "black", alpha = 0.5) +
+  geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "blue", alpha = 0.5) +
+  scale_color_manual(values = c("No significativo" = "gray70", "Significativo" = "red")) +
+  labs(title = "MA-Plot: Obeso 1 vs Obeso 2",
+       x = "Log10(Expresión Media + 1)", 
+       y = "Log2 Fold Change",
+       color = "Significancia") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# Añadir etiquetas
+if(length(sig_genes) > 0) {
+  sig_ma_data <- ma_data[ma_data$significant == "Significativo", ]
+  ma_plot <- ma_plot +
+    geom_text(data = sig_ma_data, aes(label = gene), 
+              vjust = -0.5, size = 3, check_overlap = TRUE)
+}
+
+# MOSTRAR MA-Plot
+print(ma_plot)
+ggsave("02_ma_plot.png", ma_plot, width = 10, height = 7)
+
+# ==================== ANÁLISIS C: RED DE COEXPRESIÓN ====================
+cat("\n▶ ANÁLISIS C: RED DE COEXPRESIÓN\n")
+
+# Transformar datos
+expr_norm <- assay(rlog(dds, blind = FALSE))
+
+# Calcular matriz de correlación
+cor_matrix <- cor(t(expr_norm), method = "pearson")
+
+# Guardar matriz como data.frame
+cor_df <- as.data.frame(cor_matrix)
+cor_df$Gene <- rownames(cor_df)
+write.csv(cor_df, "C_correlation_matrix.csv", row.names = FALSE)
+
+# Seleccionar genes para visualización
+top_genes <- res_df %>% 
+  arrange(pvalue) %>% 
+  head(min(30, nrow(res_df))) %>% 
+  pull(gene)
+
+# ==================== GRÁFICA 3: HEATMAP DE CORRELACIÓN ====================
+cat("\n▶ GRÁFICA 3: Heatmap de Correlación\n")
+
+if(length(top_genes) >= 3) {
+  cor_subset <- cor_matrix[top_genes, top_genes]
+  
+  # MOSTRAR en RStudio
+  corrplot(cor_subset, 
+           method = "color", 
+           type = "upper",
+           tl.col = "black",
+           tl.cex = 0.7,
+           title = "Matriz de Correlación (RStudio)",
+           mar = c(0,0,2,0))
+  
+  # Guardar PNG
+  png("C1_correlation_heatmap.png", width = 800, height = 700)
+  corrplot(cor_subset, 
+           method = "color", 
+           type = "upper",
+           tl.col = "black",
+           tl.cex = 0.7,
+           title = "Matriz de Correlación entre Genes",
+           mar = c(0,0,2,0))
+  dev.off()
+}
+
+# ==================== GRÁFICA 4: RED DE COEXPRESIÓN ====================
+cat("\n▶ GRÁFICA 4: Red de Coexpresión\n")
+
+# Construir red
+cor_threshold <- 0.80
+adj_matrix <- ifelse(abs(cor_matrix) > cor_threshold, 1, 0)
+diag(adj_matrix) <- 0
+
+g <- graph_from_adjacency_matrix(adj_matrix, mode = "undirected", diag = FALSE)
+
+if(vcount(g) > 0) {
+  # Calcular medidas de red
+  degree_vals <- degree(g)
+  
+  # Crear data.frame de genes importantes
+  important_genes_df <- data.frame(
+    Gene = names(degree_vals),
+    Degree = degree_vals
+  ) %>% 
+    arrange(desc(Degree)) %>% 
+    filter(Degree > 0)
+  
+  # Guardar como CSV
+  write.csv(important_genes_df, "C_network_centrality.csv", row.names = FALSE)
+  
+  cat("✓ Red con", vcount(g), "nodos y", ecount(g), "conexiones\n")
+  
+  # Visualizar red si hay suficientes nodos
+  if(nrow(important_genes_df) >= 3) {
+    top_hubs <- important_genes_df$Gene[1:min(15, nrow(important_genes_df))]
+    
+    if(length(top_hubs) >= 3) {
+      sub_adj <- adj_matrix[top_hubs, top_hubs]
+      sub_g <- graph_from_adjacency_matrix(sub_adj, mode = "undirected", diag = FALSE)
+      
+      if(vcount(sub_g) >= 3) {
+        # Detectar comunidades
+        communities <- cluster_louvain(sub_g)
+        
+        # MOSTRAR en RStudio
+        plot(sub_g,
+             vertex.size = degree(sub_g) * 2 + 8,
+             vertex.color = rainbow(max(communities$membership), alpha = 0.7)[communities$membership],
+             vertex.label.cex = 0.9,
+             vertex.label.color = "black",
+             vertex.frame.color = NA,
+             edge.color = "gray60",
+             edge.width = 1,
+             main = "Red de Coexpresión (RStudio)",
+             layout = layout_with_fr)
+        
+        # Guardar PNG
+        png("C2_gene_coexpression_network.png", width = 900, height = 800)
+        plot(sub_g,
+             vertex.size = degree(sub_g) * 2 + 8,
+             vertex.color = rainbow(max(communities$membership), alpha = 0.7)[communities$membership],
+             vertex.label.cex = 0.9,
+             vertex.label.color = "black",
+             vertex.frame.color = NA,
+             edge.color = "gray60",
+             edge.width = 1,
+             main = "Red de Coexpresión Génica",
+             layout = layout_with_fr)
+        dev.off()
+      }
+    }
+  }
+}
+
+# ==================== ANÁLISIS D: ENRIQUECIMIENTO FUNCIONAL ====================
+cat("\n▶ ANÁLISIS D: ENRIQUECIMIENTO FUNCIONAL\n")
+
+if(length(sig_genes) >= 3) {
+  # Realizar análisis de enriquecimiento
+  tryCatch({
+    gost_results <- gost(query = sig_genes,
+                         organism = "hsapiens",
+                         sources = c("GO:BP", "GO:MF", "KEGG"),
+                         evcodes = FALSE,
+                         user_threshold = 0.05,
+                         correction_method = "g_SCS")
+    
+    if(!is.null(gost_results) && nrow(gost_results$result) > 0) {
+      # Guardar resultados como data.frame
+      enrichment_df <- as.data.frame(gost_results$result)
+      write.csv(enrichment_df, "D_enrichment_results.csv", row.names = FALSE)
+      
+      # ==================== GRÁFICA 5: GO BIOLOGICAL PROCESS ====================
+      cat("\n▶ GRÁFICA 5: GO Biological Process\n")
+      
+      go_bp <- enrichment_df %>% 
+        filter(source == "GO:BP") %>% 
+        arrange(p_value) %>% 
+        head(10)
+      
+      if(nrow(go_bp) > 0) {
+        # MOSTRAR en RStudio
+        par(mar = c(5, 15, 4, 2))
+        barplot(height = -log10(go_bp$p_value),
+                names.arg = substr(go_bp$term_name, 1, 50),
+                horiz = TRUE,
+                las = 1,
+                col = "steelblue",
+                main = "GO Biological Process (RStudio)",
+                xlab = "-log10(p-value)")
+        
+        # Guardar PNG
+        png("D1_GO_BP_enrichment.png", width = 1000, height = 700)
+        par(mar = c(5, 15, 4, 2))
+        barplot(height = -log10(go_bp$p_value),
+                names.arg = substr(go_bp$term_name, 1, 50),
+                horiz = TRUE,
+                las = 1,
+                col = "steelblue",
+                main = "GO Biological Process",
+                xlab = "-log10(p-value)")
+        dev.off()
+      }
+      
+      # ==================== GRÁFICA 6: KEGG PATHWAYS ====================
+      cat("\n▶ GRÁFICA 6: KEGG Pathways\n")
+      
+      kegg <- enrichment_df %>% 
+        filter(source == "KEGG") %>% 
+        arrange(p_value) %>% 
+        head(10)
+      
+      if(nrow(kegg) > 0) {
+        # MOSTRAR en RStudio
+        par(mar = c(5, 15, 4, 2))
+        barplot(height = -log10(kegg$p_value),
+                names.arg = substr(kegg$term_name, 1, 50),
+                horiz = TRUE,
+                las = 1,
+                col = "darkred",
+                main = "KEGG Pathways (RStudio)",
+                xlab = "-log10(p-value)")
+        
+        # Guardar PNG
+        png("D2_KEGG_enrichment.png", width = 1000, height = 700)
+        par(mar = c(5, 15, 4, 2))
+        barplot(height = -log10(kegg$p_value),
+                names.arg = substr(kegg$term_name, 1, 50),
+                horiz = TRUE,
+                las = 1,
+                col = "darkred",
+                main = "KEGG Pathways",
+                xlab = "-log10(p-value)")
+        dev.off()
+      }
+      
+      cat("✓ Enriquecimiento completado\n")
+    }
+  }, error = function(e) {
+    cat("⚠ Error en enriquecimiento:", e$message, "\n")
+  })
+}
+
+# ==================== FIGURA INTEGRADA ====================
+cat("\n▶ CREANDO FIGURA INTEGRADA\n")
+
+png("Figure_integrated_analysis.png", width = 1600, height = 1200)
+par(mfrow = c(2, 2), mar = c(5, 4, 4, 2), cex.main = 1.2)
+
+# Panel 1: Volcano Plot
+plot(res_df$log2FoldChange, -log10(res_df$pvalue),
+     pch = 19, cex = 0.6,
+     col = ifelse(res_df$significant == "Significativo", "red", "gray70"),
+     xlab = "Log2 Fold Change", ylab = "-log10(p-value)",
+     main = "A) Volcano Plot")
+abline(v = c(-1, 1), lty = 2, col = "blue")
+abline(h = -log10(0.05), lty = 2, col = "green")
+
+# Panel 2: MA-Plot
+plot(log10(ma_data$mean_expression + 1), ma_data$log2FoldChange,
+     pch = 19, cex = 0.6,
+     col = ifelse(ma_data$significant == "Significativo", "red", "gray70"),
+     xlab = "Log10(Expresión Media + 1)", ylab = "Log2 Fold Change",
+     main = "B) MA-Plot")
+abline(h = 0, col = "black")
+abline(h = c(-1, 1), lty = 2, col = "blue")
+
+# Panel 3: Términos enriquecidos
+if(exists("go_bp") && nrow(go_bp) > 0) {
+  barplot(height = -log10(head(go_bp$p_value, 5)),
+          names.arg = substr(head(go_bp$term_name, 5), 1, 40),
+          horiz = TRUE, las = 1, col = "steelblue",
+          main = "C) Top 5 GO Terms", xlab = "-log10(p-value)")
+} else {
+  plot(1, 1, type = "n", main = "C) Sin términos enriquecidos", 
+       xlab = "", ylab = "", axes = FALSE)
+  text(1, 1, "No hay términos\nsignificativos", cex = 1.2)
+}
+
+# Panel 4: Heatmap simple
+if(length(top_genes) >= 3) {
+  exp_data <- expr_norm[top_genes, ]
+  exp_scaled <- t(scale(t(exp_data)))
+  
+  image(1:ncol(exp_scaled), 1:nrow(exp_scaled),
+        t(exp_scaled),
+        col = colorRampPalette(c("blue", "white", "red"))(100),
+        xlab = "Muestras", ylab = "Genes",
+        main = "D) Heatmap de Expresión",
+        axes = FALSE)
+  
+  axis(1, at = 1:ncol(exp_scaled), labels = colnames(exp_scaled), las = 2, cex.axis = 0.7)
+  axis(2, at = 1:nrow(exp_scaled), labels = rownames(exp_scaled), las = 1, cex.axis = 0.6)
+} else {
+  plot(1, 1, type = "n", main = "D) Heatmap", 
+       xlab = "", ylab = "", axes = FALSE)
+  text(1, 1, "Datos insuficientes", cex = 1.2)
+}
+
+dev.off()
+
+# ==================== RESUMEN FINAL ====================
+cat("\n")
+cat("==============================================================================\n")
+cat("✅ ANÁLISIS COMPLETADO EXITOSAMENTE\n")
+cat("==============================================================================\n")
+cat("\n")
+
+cat("📊 GRÁFICAS GENERADAS:\n")
+cat("1. 01_volcano_plot.png           - Volcano Plot\n")
+cat("2. 02_ma_plot.png               - MA-Plot\n")
+cat("3. C1_correlation_heatmap.png   - Heatmap de correlación\n")
+cat("4. C2_gene_coexpression_network.png - Red de coexpresión\n")
+cat("5. D1_GO_BP_enrichment.png      - GO Biological Process\n")
+cat("6. D2_KEGG_enrichment.png       - KEGG Pathways\n")
+cat("7. Figure_integrated_analysis.png - Figura integrada\n")
+cat("\n")
+
+cat("📁 DATOS GUARDADOS:\n")
+cat("1. differential_expression_results.csv - Resultados DE\n")
+cat("2. C_correlation_matrix.csv           - Matriz de correlación\n")
+cat("3. C_network_centrality.csv           - Genes centrales\n")
+cat("4. D_enrichment_results.csv           - Resultados enriquecimiento\n")
+cat("\n")
+
+cat("📈 RESULTADOS:\n")
+cat(sprintf("• Genes analizados: %d\n", nrow(res_df)))
+cat(sprintf("• Genes significativos: %d\n", length(sig_genes)))
+
+if(exists("g")) {
+  cat(sprintf("• Red: %d nodos, %d conexiones\n", vcount(g), ecount(g)))
+}
+
+if(exists("enrichment_df")) {
+  cat(sprintf("• Términos enriquecidos: %d\n", nrow(enrichment_df)))
+}
+
+cat("\n")
+cat("******************************************************************************\n")
+cat("✅ ANÁLISIS LISTO PARA PUBLICACIÓN\n")
+cat("******************************************************************************\n")
+cat("\n")
+
+```
