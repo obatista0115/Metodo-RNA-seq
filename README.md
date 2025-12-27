@@ -36,4 +36,18 @@ Los análisis están implementados principalmente en **R (v4.0+)**, utilizando l
 **Oriana Batista Ceballos** *Máster en Bioinformática - UNIR (2025)* 
 
 ---
+
+## Contacto y Acceso Rápido
+Si deseas acceder a este repositorio desde tu dispositivo móvil, escanea el siguiente código QR:
+
+<p align="left">
+  <img src="qr-code.png" width="250" title="QR Code Metodo-RNA-seq">
+</p>
+
+
+---
+
 *Este repositorio ha sido creado con fines académicos y de investigación. Para consultas sobre la implementación o los datos, por favor abre un 'Issue' en este repositorio.*
+
+---
+
