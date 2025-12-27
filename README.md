@@ -1,4 +1,4 @@
-# Metodologías de Análisis Bioinformático (RNA-seq) 🧬
+# Métodos de Análisis Bioinformático (RNA-seq) 🧬
 
 Este repositorio centraliza los flujos de trabajo bioinformáticos desarrollados durante mi formación en la materia de Secuenciación y Ciencias -Ómicas del **Máster en Bioinformática de la Universidad Internacional de La Rioja (UNIR) - 2025**. El objetivo es documentar y compartir pipelines estandarizados para el estudio del transcriptoma, desde el procesamiento de lecturas crudas hasta la interpretación biológica avanzada.
 
