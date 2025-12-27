@@ -33,7 +33,7 @@ Los análisis están implementados principalmente en **R (v4.0+)**, utilizando l
 ---
 
 ## 👤 Autor
-**Oriana Batista Ceballos** *Máster en Bioinformática - UNIR (2025)* 
+**Oriana Batista Ceballos, M.Sc., Dr.rer.nat.** *Máster en Bioinformática - UNIR (2025)* 
 
 ---
 
@@ -41,7 +41,7 @@ Los análisis están implementados principalmente en **R (v4.0+)**, utilizando l
 
 Este proyecto ha sido desarrollado como parte de las actividades académicas de la **UNIR (Universidad Internacional de La Rioja)**. El flujo de trabajo y la bibliografía sugerida para el análisis de **RNA-seq** (incluyendo el uso de bibliotecas de R y herramientas de control de calidad) fueron provistos por la institución educativa.
 
-La ejecución técnica, el procesamiento de datos y la implementación del pipeline han sido realizados por el autor bajo los estándares de calidad del **Centro Gendiagnostik**.
+La ejecución técnica, el procesamiento de datos y la implementación del pipeline han sido realizados por la autora bajo los estándares de calidad del **Centro Gendiagnostik**.
 
 ### Contacto y Acceso Rápido
 Escanea el siguiente código para acceder a la documentación técnica desde tu dispositivo móvil:
