@@ -37,12 +37,20 @@ Los análisis están implementados principalmente en **R (v4.0+)**, utilizando l
 
 ---
 
-## Contacto y Acceso Rápido
-Si deseas acceder a este repositorio desde tu dispositivo móvil, escanea el siguiente código QR:
+## Reconocimiento Académico y Profesional
+
+Este proyecto ha sido desarrollado como parte de las actividades académicas de la **UNIR (Universidad Internacional de La Rioja)**. El flujo de trabajo y la bibliografía sugerida para el análisis de **RNA-seq** (incluyendo el uso de bibliotecas de R y herramientas de control de calidad) fueron provistos por la institución educativa.
+
+La ejecución técnica, el procesamiento de datos y la implementación del pipeline han sido realizados por el autor bajo los estándares de calidad del **Centro Gendiagnostik**.
+
+### Contacto y Acceso Rápido
+Escanea el siguiente código para acceder a la documentación técnica desde tu dispositivo móvil:
 
 <p align="left">
-  <img src="qr-code.png" width="250" title="QR Code Metodo-RNA-seq">
+  <img src="qr-code.png" width="220" title="QR Centro Gendiagnostik">
 </p>
+
+**Centro Gendiagnostik** | *Innovación en Genética y Bioinformática*
 
 
 ---
