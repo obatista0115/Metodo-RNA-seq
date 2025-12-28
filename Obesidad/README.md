@@ -36,4 +36,4 @@ El pipeline genera las siguientes representaciones gráficas fundamentales:
 | **dplyr** | Manipulación y limpieza de datos. |
 
 ---
-**Autor:** Oriana Batista Ceballos (2025)
+**Autor:** Oriana Batista Ceballos, M.Sc., Dr.rer.nat. (2025)
