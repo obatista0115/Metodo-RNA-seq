@@ -25,7 +25,7 @@ El pipeline genera las siguientes representaciones gráficas fundamentales:
 
 ## 🛠 Herramientas y Bibliotecas Utilizadas
 
-| Herramienta / Librería | Función en este estudio |
+| Herramienta / Biblioteca | Función en este estudio |
 | :--- | :--- |
 | **FastQC** | Control de calidad de secuencias. |
 | **Salmon / tximport** | Cuantificación e importación de datos. |
